@@ -1,0 +1,20 @@
+{
+  "cookies": [
+    {
+      "name": "dtCookie",
+      "value": "v_4_srv_1_sn_3DFF2FA84AE210DCC8B09F3376D92774_perc_100000_ol_0_mul_1_app-3Ae621956890129498_1_rcs-3Acss_0"
+    },
+    {
+      "name": "JSESSIONID",
+      "value": "0000Rt98SkDVppKkKyv3tHUW8nu:n3"
+    },
+    {
+      "name": "lastActivity",
+      "value": "1674740374420"
+    },
+    {
+      "name": "XSRF-TOKEN",
+      "value": "18c96aab-5b54-425e-9185-8fb65141343a"
+    }
+  ]
+}
