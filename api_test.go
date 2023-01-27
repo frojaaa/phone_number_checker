@@ -1,48 +1,31 @@
-package main
+package main_test
 
 import (
-	"encoding/json"
+	"bufio"
 	"fmt"
-	"log"
-	"net/http"
 	"os"
 	"testing"
 )
 
-type Headers struct {
-	Headers []struct {
-		Name  string
-		Value string
+func BenchmarkIONumbers(b *testing.B) {
+	f, err := os.Open("test.txt")
+	var numbers []string
+	if err != nil {
+		b.Fatal(err)
 	}
-}
 
-func parseHeaders(headers *Headers) error {
-	file, err := os.ReadFile("./headers.json")
-	if err != nil {
-		log.Println("Error while reading headers: ", err)
-	}
-	err = json.Unmarshal(file, &headers)
-	if err != nil {
-		log.Println("Error while decoding JSON: ", err)
-	}
-	return err
-}
+	defer f.Close()
 
-func TestAPICall(t *testing.T) {
-	client := &http.Client{}
-	headers := Headers{}
-	err := parseHeaders(&headers)
-	if err != nil {
-		log.Fatal(err)
+	scanner := bufio.NewScanner(f)
+	scanner.Split(bufio.ScanLines)
+
+	for scanner.Scan() {
+		fmt.Println(scanner.Text())
+		numbers = append(numbers, scanner.Text())
 	}
-	request, err := http.NewRequest("GET", "https://ib.rencredit.ru/rencredit.server.portal.app/rest/private/transfers/internal/register", nil)
-	for _, header := range headers.Headers {
-		request.Header.Set(header.Name, header.Value)
+
+	b.Log(len(numbers))
+	if err = scanner.Err(); err != nil {
+		b.Fatal(err)
 	}
-	response, err := client.Do(request)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	body := response.StatusCode
-	fmt.Println(body)
 }
