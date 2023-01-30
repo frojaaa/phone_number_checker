@@ -76,6 +76,7 @@ func fillTransferFields(page playwright.Page, fields tranferFields) {
 	err := fields.phone.Fill("9000000000")
 	handleError("Error while filling phone", &err)
 
+	err = fields.transferSum.Fill("")
 	err = fields.transferSum.Fill("1")
 	handleError("Error while filling transfer sum", &err)
 
@@ -109,8 +110,8 @@ func LoginToAccount(page playwright.Page, login string, password string) {
 func GetTransferPage(page playwright.Page, timeout *float64) {
 	stateVisible := playwright.WaitForSelectorState("visible")
 	selector, err := page.WaitForSelector(".header-user-menu__profile", playwright.PageWaitForSelectorOptions{
-		State: &stateVisible,
-		//Timeout: timeout,
+		State:   &stateVisible,
+		Timeout: timeout,
 	})
 	handleError(selector.String(), &err)
 	fmt.Println("Visit transfers")

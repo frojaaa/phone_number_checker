@@ -1,0 +1,107 @@
+{
+  "transfer": {
+    "payeeBankBIC": "044525135",
+    "payeeBankCity": "Москва",
+    "payeeBankCorrAccount": "30101810845250000135",
+    "payeeBankName": "КБ \"Ренессанс Кредит\" (ООО)",
+    "paymentMethod": "BY_PHONE",
+    "financial": {
+      "application": {
+        "applicationId": 100585256,
+        "applicationAmount": {
+          "amount": 1,
+          "currency": {
+            "symbol": "₽",
+            "scale": 2,
+            "externalValue": "RUB",
+            "longText": "Рубли РФ",
+            "icon": "https://ib.rencredit.ru/images/currency/RUR2icon.png",
+            "iconProperty": {
+              "iconType": "icon",
+              "iconName": "ic_40_rus"
+            },
+            "code": "RUR",
+            "text": "₽"
+          }
+        },
+        "feeAmount": {
+          "amount": 0,
+          "currency": {
+            "symbol": "₽",
+            "scale": 2,
+            "externalValue": "RUB",
+            "longText": "Рубли РФ",
+            "icon": "https://ib.rencredit.ru/images/currency/RUR2icon.png",
+            "iconProperty": {
+              "iconType": "icon",
+              "iconName": "ic_40_rus"
+            },
+            "code": "RUR",
+            "text": "₽"
+          }
+        },
+        "totalAmount": {
+          "amount": 1,
+          "currency": {
+            "symbol": "₽",
+            "scale": 2,
+            "externalValue": "RUB",
+            "longText": "Рубли РФ",
+            "icon": "https://ib.rencredit.ru/images/currency/RUR2icon.png",
+            "iconProperty": {
+              "iconType": "icon",
+              "iconName": "ic_40_rus"
+            },
+            "code": "RUR",
+            "text": "₽"
+          }
+        },
+        "operationType": "4.31.01.17"
+      },
+      "paymentPurpose": "Дарение",
+      "paymentPurposeCode": "GIFT",
+      "payerINN": "000000000000",
+      "payeeINN": "000000000000",
+      "source": {
+        "accountNumber": "40817810244752018492",
+        "accountType": "CARD_ACCOUNT",
+        "contractNumber": "44752018492",
+        "friendlyName": "Дебетовая \"Главная\"",
+        "maskedCardNumber": "220341******8967",
+        "productType": "CARD",
+        "balance": 8,
+        "currency": {
+          "symbol": "₽",
+          "scale": 2,
+          "externalValue": "RUB",
+          "longText": "Рубли РФ",
+          "icon": "https://ib.rencredit.ru/images/currency/RUR2icon.png",
+          "iconProperty": {
+            "iconType": "icon",
+            "iconName": "ic_40_rus"
+          },
+          "code": "RUR",
+          "text": "₽"
+        }
+      },
+      "destination": {
+        "accountNumber": "4081781054*******210",
+        "productType": "ACCOUNT"
+      },
+      "destinationPhoneNumber": "+7 (918) 118-56-88",
+      "payeeNaturalSurname": "З*****",
+      "payeeNaturalName": "Андрей",
+      "payeeNaturalPatronymic": "Андреевич"
+    },
+    "operationType": "4.31.01.17",
+    "operationName": "Перевод клиенту Ренессанс Кредит"
+  },
+  "otpOperation": {
+    "result": "SUCCESS",
+    "maskedPhone": "+7(911)***-**-86",
+    "validityOfOtpInSeconds": 600,
+    "otpTimeout": 180,
+    "attemptsLeft": 3,
+    "confirmationCodeLength": 4
+  }
+}

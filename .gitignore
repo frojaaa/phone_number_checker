@@ -6,7 +6,10 @@
 *.dll
 *.so
 *.dylib
-
+transferTest.json
+cookies.json
+headers.json
+test.txt
 # Test binary, built with `go test -c`
 *.test
 
