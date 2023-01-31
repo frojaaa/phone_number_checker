@@ -1,9 +1,10 @@
-package main
+package browser
 
 import (
 	"fmt"
 	"github.com/playwright-community/playwright-go"
 	"log"
+	"phone_numbers_checker/errors"
 )
 
 type loginFields struct {
@@ -11,7 +12,7 @@ type loginFields struct {
 	password playwright.ElementHandle
 }
 
-type tranferFields struct {
+type transferFields struct {
 	phone       playwright.ElementHandle
 	transferSum playwright.ElementHandle
 	destination playwright.ElementHandle
@@ -19,7 +20,7 @@ type tranferFields struct {
 
 func GetBrowserPage(browser playwright.Browser) playwright.Page {
 	page, err := browser.NewPage()
-	handleError("Can't  open page", &err)
+	errors.HandleError("Can't  open page", &err)
 	page.On("response", func(response playwright.Response) {
 		if response.URL() == "https://ib.rencredit.ru/rencredit.server.portal.app/rest/private/transfers/internal/register" {
 			fmt.Printf("<< %v %s\n", response.Status(), response.URL())
@@ -30,10 +31,10 @@ func GetBrowserPage(browser playwright.Browser) playwright.Page {
 
 func findLoginFields(page playwright.Page) loginFields {
 	usernameInput, err := page.QuerySelector("#username")
-	handleError("Can't select username input", &err)
+	errors.HandleError("Can't select username input", &err)
 
 	passwordInput, err := page.QuerySelector("#password")
-	handleError("Can't select password input", &err)
+	errors.HandleError("Can't select password input", &err)
 
 	loginFields := loginFields{
 		login:    usernameInput,
@@ -43,18 +44,18 @@ func findLoginFields(page playwright.Page) loginFields {
 	return loginFields
 }
 
-func findTransferFields(page playwright.Page) tranferFields {
+func findTransferFields(page playwright.Page) transferFields {
 	phoneInput, err := page.WaitForSelector("#destinationPhoneNumber")
-	handleError("Can't select phone input", &err)
+	errors.HandleError("Can't select phone input", &err)
 
 	transferSumInput, err := page.WaitForSelector("#amount")
-	handleError("Can't select transfer input", &err)
+	errors.HandleError("Can't select transfer input", &err)
 	err = transferSumInput.Fill("1")
-	handleError("Error while filling transfer sum", &err)
+	errors.HandleError("Error while filling transfer sum", &err)
 	destinationInput, err := page.WaitForSelector("#select2-paymentPurposeCode-container")
-	handleError("Can't select destination input", &err)
+	errors.HandleError("Can't select destination input", &err)
 
-	fields := tranferFields{
+	fields := transferFields{
 		phone:       phoneInput,
 		transferSum: transferSumInput,
 		destination: destinationInput,
@@ -66,28 +67,28 @@ func findTransferFields(page playwright.Page) tranferFields {
 func fillLoginFields(loginFields loginFields, login string, password string) {
 	log.Println(len(login), password)
 	err := loginFields.login.Fill(login)
-	handleError("error while filling username", &err)
+	errors.HandleError("error while filling username", &err)
 
 	err = loginFields.password.Fill(password)
-	handleError("error while filling password", &err)
+	errors.HandleError("error while filling password", &err)
 }
 
-func fillTransferFields(page playwright.Page, fields tranferFields) {
+func fillTransferFields(page playwright.Page, fields transferFields) {
 	err := fields.phone.Fill("9000000000")
-	handleError("Error while filling phone", &err)
+	errors.HandleError("Error while filling phone", &err)
 
 	err = fields.transferSum.Fill("")
 	err = fields.transferSum.Fill("1")
-	handleError("Error while filling transfer sum", &err)
+	errors.HandleError("Error while filling transfer sum", &err)
 
 	err = fields.destination.Focus()
 	err = fields.destination.Click()
-	handleError("Error while click on destination input", &err)
+	errors.HandleError("Error while click on destination input", &err)
 
 	gift, err := page.WaitForSelector("ul.select2-results__options:nth-child(2) > li:nth-child(1)")
-	handleError("Error while selecting gift button", &err)
+	errors.HandleError("Error while selecting gift button", &err)
 	err = gift.Click()
-	handleError("Error while clicking on gift button", &err)
+	errors.HandleError("Error while clicking on gift button", &err)
 }
 
 func LoginToAccount(page playwright.Page, login string, password string) {
@@ -100,11 +101,11 @@ func LoginToAccount(page playwright.Page, login string, password string) {
 	fillLoginFields(loginFields, login, password)
 
 	loginBtn, err := page.QuerySelector("#button-button")
-	handleError("Can't select login button", &err)
+	errors.HandleError("Can't select login button", &err)
 
 	timeout := 10000.0
 	err = loginBtn.Click(playwright.ElementHandleClickOptions{Timeout: &timeout})
-	handleError("Error while login to account: ", &err)
+	errors.HandleError("Error while login to account: ", &err)
 }
 
 func GetTransferPage(page playwright.Page, timeout *float64) {
@@ -113,44 +114,47 @@ func GetTransferPage(page playwright.Page, timeout *float64) {
 		State:   &stateVisible,
 		Timeout: timeout,
 	})
-	handleError(selector.String(), &err)
+	errors.HandleError(selector.String(), &err)
 	fmt.Println("Visit transfers")
 	_, err = page.Goto("https://ib.rencredit.ru/#/transfers/internal", playwright.PageGotoOptions{
 		WaitUntil: playwright.WaitUntilStateNetworkidle,
 	})
-	handleError("Error while getting page", &err)
+	errors.HandleError("Error while getting page", &err)
 	phoneBtn, err := page.WaitForSelector("#paymentMethod2", playwright.PageWaitForSelectorOptions{State: &stateVisible})
-	handleError("Can't select phone button", &err)
+	errors.HandleError("Can't select phone button", &err)
 	err = phoneBtn.Click()
-	handleError("Can't click phone button", &err)
+	errors.HandleError("Can't click phone button", &err)
 }
 
-func sendFirstPhoneRequest(page playwright.Page) map[string]string {
+func SendFirstPhoneRequest(page playwright.Page) map[string]string {
 	fields := findTransferFields(page)
 	fillTransferFields(page, fields)
 
 	primaryBtn, err := page.WaitForSelector("#primary-button")
-	handleError("Error while selecting primary button", &err)
+	errors.HandleError("Error while selecting primary button", &err)
 
 	err = primaryBtn.Click()
-	handleError("Error while clicking on primary button", &err)
+	errors.HandleError("Error while clicking on primary button", &err)
 
 	response := page.WaitForResponse("https://ib.rencredit.ru/rencredit.server.portal.app/rest/private/transfers/internal/register")
 	headers, err := response.Request().AllHeaders()
-	handleError("Error while getting headers", &err)
+	errors.HandleError("Error while getting headers", &err)
 	return headers
 }
 
-func keepSession(page playwright.Page) {
+func KeepSession(page playwright.Page) {
 	for {
 		fmt.Println("Keep session")
 		timeout := 0.0
 		button, err := page.WaitForSelector("#button-button", playwright.PageWaitForSelectorOptions{
 			Timeout: &timeout,
 		})
-		handleError("Error while waiting for session button: ", &err)
+		if err != nil {
+			log.Println("Error while waiting for session button: ", err)
+			return
+		}
 		err = button.Click()
-		handleError("Error while clicking session button: ", &err)
+		errors.HandleError("Error while clicking session button: ", &err)
 		fmt.Println("Button clicked")
 	}
 }

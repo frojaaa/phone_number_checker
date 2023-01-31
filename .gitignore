@@ -10,6 +10,10 @@ transferTest.json
 cookies.json
 headers.json
 test.txt
+
+input/
+input_copy/
+output/
 # Test binary, built with `go test -c`
 *.test
 

@@ -6,12 +6,23 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"phone_numbers_checker/checker"
 	"testing"
 )
 
 type transfer struct {
 	Transfer map[string]interface{} `json:"transfer"`
 }
+
+var (
+	headless    = true
+	numsChecker = checker.Checker{
+		Headless:      &headless,
+		NumWorkers:    0,
+		InputFileDir:  "./input",
+		OutputFileDir: "./output",
+	}
+)
 
 func BenchmarkIONumbers(b *testing.B) {
 	f, err := os.Open("test.txt")
@@ -50,4 +61,13 @@ func TestJSONParsing(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log(target.Transfer["payeeBankName"].(string))
+}
+
+func TestNumbersIO(t *testing.T) {
+	numbers := make(chan checker.Number, 500000)
+	numsChecker.GetNumbers(numbers)
+	t.Log(len(numbers))
+	go close(numbers)
+	numsChecker.SaveRelevantNumbers(numbers)
+	numsChecker.DeleteInputFiles()
 }
