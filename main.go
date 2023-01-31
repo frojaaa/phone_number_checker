@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/joho/godotenv"
 	"github.com/playwright-community/playwright-go"
@@ -12,6 +13,10 @@ import (
 	"sync"
 	"time"
 )
+
+type Transfer struct {
+	Transfer map[string]interface{} `json:"transfer"`
+}
 
 func handleError(helpText string, err *error) {
 	if *err != nil {
@@ -39,16 +44,20 @@ func makeRequest(url *string, form url2.Values, headers *map[string]string) (*ht
 
 func getResponse(request *http.Request, client *http.Client) (*http.Response, error) {
 	resp, err := client.Do(request)
+	return resp, err
+}
+
+func getJSON(response *http.Response, target interface{}) error {
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
 			log.Fatalln("error while closing response body: ", err)
 		}
-	}(resp.Body)
-	return resp, err
+	}(response.Body)
+	return json.NewDecoder(response.Body).Decode(target)
 }
 
-func askForPhone(url *string, headers *map[string]string, client *http.Client, tasks chan int, results chan string, wg *sync.WaitGroup, id int) {
+func askForPhone(url *string, headers *map[string]string, client *http.Client, tasks chan int, results chan string, wg *sync.WaitGroup, id int, target *Transfer) {
 	defer wg.Done()
 	for num := range tasks {
 		form := generateFormData()
@@ -61,11 +70,13 @@ func askForPhone(url *string, headers *map[string]string, client *http.Client, t
 		handleError("error doing request: ", &err)
 		resp, err := getResponse(request, client)
 		handleError("error while request: ", &err)
+		err = getJSON(resp, target)
+		bankName := target.Transfer["payeeBankName"].(string)
 		//bodyBytes, err := io.ReadAll(resp.Body)
 		//handleError("Error while reading response bytes: ", &err)
 		//bodyString := string(bodyBytes)
 		fmt.Printf("[worker %d] Worker Sending result of task %d\n", id, num)
-		results <- resp.Status
+		results <- bankName
 	}
 }
 
@@ -77,8 +88,8 @@ func main() {
 	url := "https://ib.rencredit.ru/rencredit.server.portal.app/rest/private/transfers/internal/register"
 	pw, err := playwright.Run()
 	handleError("Unable to run playwright", &err)
-	headless := true
-	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{Headless: &headless})
+	headless := false
+	browser, err := pw.Firefox.Launch(playwright.BrowserTypeLaunchOptions{Headless: &headless})
 	handleError("Can't launch Chromium", &err)
 	fmt.Println(env["BANK_LOGIN"], env["BANK_PASSWORD"])
 	page := GetBrowserPage(browser)
@@ -90,20 +101,30 @@ func main() {
 
 	headers := sendFirstPhoneRequest(page)
 
+	quit := make(chan bool, 2)
+	go func() {
+		for range quit {
+			keepSession(page)
+		}
+	}()
+
+	quit <- false
+
 	respChan := make(chan string, 50)
 	tasksChan := make(chan int, 50)
 	wg := sync.WaitGroup{}
-	numbers := make([]string, 50)
-	for i := 0; i < 10; i++ {
+	numbers := make([]string, 1)
+	for i := 0; i < 1; i++ {
+		transfer := new(Transfer)
 		wg.Add(1)
-		go askForPhone(&url, &headers, client, tasksChan, respChan, &wg, i)
+		go askForPhone(&url, &headers, client, tasksChan, respChan, &wg, i, transfer)
 		handleError("error while reading POST response: ", &err)
 	}
 
 	for num := range numbers {
 		tasksChan <- num
 	}
-	fmt.Println("[main] Wrote 50 tasks")
+	fmt.Println("[main] Wrote 1 task")
 
 	close(tasksChan)
 
@@ -115,6 +136,11 @@ func main() {
 	for respBody := range respChan {
 		fmt.Println(respBody)
 	}
+	//fmt.Println("Sleeping")
+	//time.Sleep(5 * time.Minute)
+	quit <- true
+	close(quit)
+	fmt.Println("Quit channel closed")
 	fmt.Println("[main] Main stopped")
 
 	if err = browser.Close(); err != nil {

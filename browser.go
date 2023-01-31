@@ -140,3 +140,17 @@ func sendFirstPhoneRequest(page playwright.Page) map[string]string {
 	handleError("Error while getting headers", &err)
 	return headers
 }
+
+func keepSession(page playwright.Page) {
+	for {
+		fmt.Println("Keep session")
+		timeout := 0.0
+		button, err := page.WaitForSelector("#button-button", playwright.PageWaitForSelectorOptions{
+			Timeout: &timeout,
+		})
+		handleError("Error while waiting for session button: ", &err)
+		err = button.Click()
+		handleError("Error while clicking session button: ", &err)
+		fmt.Println("Button clicked")
+	}
+}
