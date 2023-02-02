@@ -1,6 +1,8 @@
 package errors
 
-import "log"
+import (
+	"log"
+)
 
 func HandleError(helpText string, err *error) {
 	if *err != nil {

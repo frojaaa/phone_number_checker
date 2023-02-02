@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"github.com/gin-gonic/gin"
+	"net/http"
 	"phone_numbers_checker/checker"
 	"phone_numbers_checker/errors"
 	"strconv"
@@ -18,7 +19,7 @@ func RunChecker(c *gin.Context) {
 		OutputFileDir: "./output/",
 	}
 	go numbersChecker.Run()
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"message": "Checker has began his work",
 	})
 }
