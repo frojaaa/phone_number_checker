@@ -8,6 +8,7 @@ import (
 	"os"
 	"phone_numbers_checker/controllers"
 	"phone_numbers_checker/errors"
+	"phone_numbers_checker/middleware"
 	"phone_numbers_checker/models"
 )
 
@@ -20,9 +21,12 @@ func RunServer() http.Handler {
 	errors.HandleError("Error while creating redis store: ", &err)
 	router.Use(sessions.Sessions("session", store))
 
+	protected := router.Group("/checker")
+	protected.Use(middleware.AuthRequired)
+	protected.POST("/run", controllers.RunChecker)
+	protected.POST("/checkPassword", controllers.CheckerPassword)
+
 	public := router.Group("/")
-	//router.Use(middleware.AuthRequired)
-	public.POST("/run", controllers.RunChecker)
 	public.POST("/register", controllers.Register)
 	public.POST("/login", controllers.Login)
 	public.POST("/logout", controllers.Logout)

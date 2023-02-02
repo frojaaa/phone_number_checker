@@ -8,6 +8,11 @@ import (
 	"strconv"
 )
 
+type CheckerInput struct {
+	InputFileDir  string `json:"inputFileDir" binding:"required"`
+	OutputFileDir string `json:"outputFileDir" binding:"required"`
+}
+
 func RunChecker(c *gin.Context) {
 	headless := true
 	numWorkers, err := strconv.ParseInt(c.Query("numWorkers"), 10, 32)
