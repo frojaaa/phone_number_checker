@@ -7,6 +7,7 @@ import (
 	"html"
 	"os"
 	"phone_numbers_checker/errors"
+	"phone_numbers_checker/utils/token"
 	"strings"
 )
 
@@ -41,7 +42,7 @@ func (u User) UpdateUser(field string, value any) (User, error) {
 
 func (u *User) BeforeSave() {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
-	errors.HandleError("Error while hashing password", &err)
+	errors.HandleError("Error while hashing password: ", &err)
 
 	u.Password = string(hashedPassword)
 	u.Username = html.EscapeString(strings.TrimSpace(u.Username))
@@ -52,21 +53,26 @@ func VerifyPassword(password string, hashedPassword string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }
 
-func LoginCheck(username string, password string) (User, error) {
+func LoginCheck(username string, password string) (string, error) {
 	u := User{}
 
 	err := DB.Model(User{}).Where("username = ?", username).Take(&u).Error
 	if err != nil {
-		return User{}, err
+		return "", err
 	}
 
 	err = VerifyPassword(password, u.Password)
 
 	if err != nil && err == bcrypt.ErrMismatchedHashAndPassword {
-		return User{}, err
+		return "", err
 	}
 
-	return u, nil
+	userToken, err := token.GenerateToken(u.ID)
+	if err != nil {
+		return "", err
+	}
+
+	return userToken, nil
 }
 
 func CheckerPasswordCheck(username string, checkerPassword string) (User, error) {

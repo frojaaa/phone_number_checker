@@ -40,7 +40,7 @@ func Login(c *gin.Context) {
 	u.Username = input.Username
 	u.Password = input.Password
 
-	user, err := models.LoginCheck(u.Username, u.Password)
+	token, err := models.LoginCheck(u.Username, u.Password)
 
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "username or password is incorrect."})
@@ -51,7 +51,7 @@ func Login(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"msg": "Error at server"})
 	}
-	c.JSON(http.StatusOK, gin.H{"username": user.Username, "enteredCheckerPassword": user.EnteredCheckerPassword})
+	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 
 func Register(c *gin.Context) {
@@ -82,7 +82,7 @@ func Register(c *gin.Context) {
 	session.Set(userKey, u.Username)
 	err = session.Save()
 	errors.HandleError("Error while saving session: ", &err)
-	c.JSON(http.StatusCreated, gin.H{"msg": "Вы успешно зарегистрировались", "username": u.Username, "enteredCheckerPassword": u.EnteredCheckerPassword})
+	c.JSON(http.StatusCreated, gin.H{"msg": "Вы успешно зарегистрировались"})
 }
 
 func Logout(c *gin.Context) {
