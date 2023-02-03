@@ -1,0 +1,43 @@
+body {
+    box-sizing: border-box;
+    font-family: 'Montserrat', sans-serif;
+    align-content: center;
+    text-align: center;
+}
+
+header {
+    width: 100%;
+}
+
+.app {
+    display: grid;
+    place-items: center;
+}
+
+a:visited, a {
+    color: inherit;
+    text-decoration: none;
+}
+
+button {
+    border: none;
+    background-color: inherit;
+    padding: 0;
+    cursor: pointer;
+}
+
+.nav-link, .nav-link:visited {
+    color: white;
+}
+
+.nav-link:hover, .nav-link.active:hover {
+    color: aqua !important;
+}
+
+.nav-link.active {
+    color: aqua !important;
+}
+
+form {
+    width: 50%;
+}

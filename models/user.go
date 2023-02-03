@@ -30,10 +30,11 @@ func (u User) SaveUser() (User, error) {
 }
 
 func (u User) UpdateUser(field string, value any) (User, error) {
-	fmt.Println("Saving user ", u.Username)
-	u.BeforeSave()
-	fmt.Println(u.Password)
-	err := DB.Model(User{}).Where("username = ?", u.Username).Update(field, value).Error
+	fmt.Println("Updating user ", u.Username)
+	fmt.Println(u.EnteredCheckerPassword)
+	//u.BeforeSave(enteredCheckerPassword)
+	err := DB.Model(User{}).Where("username = ?", u.Username).Update(field, value).Take(&u).Error
+	fmt.Println(u.EnteredCheckerPassword)
 	if err != nil {
 		return User{}, err
 	}
@@ -53,26 +54,29 @@ func VerifyPassword(password string, hashedPassword string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }
 
-func LoginCheck(username string, password string) (string, error) {
+func LoginCheck(username string, password string) (User, string) {
 	u := User{}
 
 	err := DB.Model(User{}).Where("username = ?", username).Take(&u).Error
 	if err != nil {
-		return "", err
+		fmt.Println(err)
+		return User{}, ""
 	}
-
+	fmt.Println(u.EnteredCheckerPassword)
 	err = VerifyPassword(password, u.Password)
 
 	if err != nil && err == bcrypt.ErrMismatchedHashAndPassword {
-		return "", err
+		fmt.Println("Password mismatch")
+		return User{}, ""
 	}
 
 	userToken, err := token.GenerateToken(u.ID)
 	if err != nil {
-		return "", err
+		fmt.Println("Error while generating token: ", &err)
+		return User{}, ""
 	}
 
-	return userToken, nil
+	return u, userToken
 }
 
 func CheckerPasswordCheck(username string, checkerPassword string) (User, error) {
