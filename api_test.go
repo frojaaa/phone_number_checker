@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"phone_numbers_checker/bot"
 	"phone_numbers_checker/checker"
 	"testing"
+	"time"
 )
 
 type transfer struct {
@@ -15,9 +17,7 @@ type transfer struct {
 }
 
 var (
-	headless    = true
 	numsChecker = checker.Checker{
-		Headless:      &headless,
 		NumWorkers:    0,
 		InputFileDir:  "./input",
 		OutputFileDir: "./output",
@@ -64,10 +64,21 @@ func TestJSONParsing(t *testing.T) {
 }
 
 func TestNumbersIO(t *testing.T) {
+	tgBot := bot.GetBot("5874789025:AAHNGeRfMY2bOmGvXpK3ZWI58GQc8NMmDF0")
+	go tgBot.Start()
 	numbers := make(chan checker.Number, 500000)
 	numsChecker.GetNumbers(numbers)
 	t.Log(len(numbers))
 	go close(numbers)
-	numsChecker.SaveRelevantNumbers(numbers)
+	numsChecker.SaveRelevantNumbers(numbers, tgBot, 994854069)
 	numsChecker.DeleteInputFiles()
+	tgBot.Stop()
+}
+
+func TestBot(t *testing.T) {
+	tgBot := bot.GetBot("5874789025:AAHNGeRfMY2bOmGvXpK3ZWI58GQc8NMmDF0")
+	go tgBot.Start()
+	fmt.Println("sleep")
+	time.Sleep(10 * time.Second)
+	tgBot.Stop()
 }

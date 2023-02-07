@@ -4,26 +4,34 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/joho/godotenv"
 	"github.com/playwright-community/playwright-go"
+	tele "gopkg.in/telebot.v3"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"phone_numbers_checker/bot"
 	"phone_numbers_checker/browser"
 	"phone_numbers_checker/errors"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
+var handled = 0
+
 type Checker struct {
-	Headless      *bool
-	NumWorkers    int
-	InputFileDir  string
-	OutputFileDir string
+	headless      *bool
+	NumWorkers    int64  `json:"numWorkers" form:"numWorkers" binding:"required"`
+	LkLogin       string `json:"lkLogin"`
+	LkPassword    string `json:"lkPassword"`
+	BotToken      string `json:"botToken"`
+	TgUserID      int64  `json:"tgUserID"`
+	InputFileDir  string `json:"inputFileDir"`
+	OutputFileDir string `json:"outputFileDir"`
 }
 
 type Transfer struct {
@@ -39,11 +47,11 @@ func fileNameWithoutExt(fileName string) string {
 	return fileName[:len(fileName)-len(filepath.Ext(fileName))]
 }
 
-func generateFormData() url.Values {
+func generateFormData(num string, account string) url.Values {
 	form := url.Values{}
-	form.Add("payerAccount", "589079858")
+	form.Add("payerAccount", account)
 	form.Add("paymentMethod", "BY_PHONE")
-	form.Add("destinationPhoneNumber", "79181185688")
+	form.Add("destinationPhoneNumber", num)
 	form.Add("amount", "1")
 	form.Add("paymentPurposeCode", "GIFT")
 	return form
@@ -72,31 +80,40 @@ func getJSON(response *http.Response, target interface{}) error {
 	return json.NewDecoder(response.Body).Decode(target)
 }
 
-func askForPhone(url *string, headers *map[string]string, client *http.Client, tasks chan Number, results chan Number, wg *sync.WaitGroup, id int, target *Transfer) {
-	defer wg.Done()
+func askForPhone(url *string, headers *map[string]string, account string, client *http.Client,
+	tasks chan Number, results chan Number, wg *sync.WaitGroup, id int64, tgBot *tele.Bot, userID int64, m *sync.Mutex) {
+	template := fmt.Sprintf("Обработано %s", strconv.Itoa(handled))
+	msg := bot.SendMessage(tgBot, userID, template)
 	for num := range tasks {
-		form := generateFormData()
-		//form.Add("payerAccount", "589079858")
-		//form.Add("paymentMethod", "BY_PHONE")
-		//form.Add("destinationPhoneNumber", "79181185688")
-		//form.Add("amount", "1")
-		//form.Add("paymentPurposeCode", "GIFT")
+		if handled != 0 && handled%50 == 0 {
+			bot.EditMessage(tgBot, msg, fmt.Sprintf("Обработано %s", strconv.Itoa(handled)))
+		}
+		fmt.Println("[askForPhone] Checking ", num)
+		form := generateFormData(num.Value, account)
 		request, err := makeRequest(url, form, headers)
 		errors.HandleError("error doing request: ", &err)
 		resp, err := getResponse(request, client)
 		errors.HandleError("error while request: ", &err)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		errors.HandleError("error getting response: ", &err)
+		bodyString := string(bodyBytes)
+		fmt.Println(bodyString)
 		if resp.StatusCode == 200 {
-			err = getJSON(resp, target)
+			//err = getJSON(resp, target)
 			//bankName := target.Transfer["payeeBankName"].(string)
 			//bodyBytes, err := io.ReadAll(resp.Body)
 			//HandleError("Error while reading response bytes: ", &err)
 			//bodyString := string(bodyBytes)
-			fmt.Printf("[worker %d] Worker Sending result of task %s\n", id, num)
+			//fmt.Printf("[worker %d] Worker Sending result of task %s\n", id, num)
 			results <- num
 		} else {
-			fmt.Println()
+			fmt.Printf("[worker %d] Number irrelevant\n", id)
 		}
+		m.Lock()
+		handled++
+		m.Unlock()
 	}
+	wg.Done()
 }
 
 func (c Checker) GetNumbers(tasks chan Number) {
@@ -114,7 +131,6 @@ func (c Checker) GetNumbers(tasks chan Number) {
 				FileName: item.Name(),
 			}
 		}
-		fmt.Println("Wrote number")
 		if err = scanner.Err(); err != nil {
 			log.Fatalf("Error while reading file: %s", err)
 		}
@@ -122,7 +138,7 @@ func (c Checker) GetNumbers(tasks chan Number) {
 	}
 }
 
-func (c Checker) SaveRelevantNumbers(numbers chan Number) {
+func (c Checker) SaveRelevantNumbers(numbers chan Number, tgBot *tele.Bot, userId int64) {
 	items, err := os.ReadDir(c.InputFileDir)
 	files := make(map[string]*os.File)
 	for _, file := range items {
@@ -130,6 +146,14 @@ func (c Checker) SaveRelevantNumbers(numbers chan Number) {
 	}
 	defer func() {
 		for _, file := range files {
+			stat, err := file.Stat()
+			errors.HandleError("error getting file stats: ", &err)
+			size := stat.Size()
+			if size != 0 {
+				bot.SendDocument(tgBot, userId, file.Name())
+			} else {
+				bot.SendMessage(tgBot, userId, "Релевантные номера не найдены в файле "+file.Name())
+			}
 			file.Close()
 		}
 	}()
@@ -141,7 +165,6 @@ func (c Checker) SaveRelevantNumbers(numbers chan Number) {
 		errors.HandleError("Error while opening file: ", &err)
 		_, err = fmt.Fprintln(file, num.Value)
 		errors.HandleError("Error while writing line to file", &err)
-		file.Close()
 	}
 	fmt.Println("All numbers are saved")
 	fmt.Println("respChan closed")
@@ -158,40 +181,41 @@ func (c Checker) DeleteInputFiles() {
 }
 
 func (c Checker) Run() {
-	env, err := godotenv.Read()
-	errors.HandleError("Error while loading .env: ", &err)
 	transport := http.Transport{DisableKeepAlives: true, MaxIdleConns: 200}
 	client := &http.Client{Timeout: 30 * time.Second, Transport: &transport}
 	requestUrl := "https://ib.rencredit.ru/rencredit.server.portal.app/rest/private/transfers/internal/register"
 	pw, err := playwright.Run()
 	errors.HandleError("Unable to run playwright", &err)
-	driver, err := pw.Firefox.Launch(playwright.BrowserTypeLaunchOptions{Headless: c.Headless})
+	headless := true
+	driver, err := pw.Firefox.Launch(playwright.BrowserTypeLaunchOptions{Headless: &headless})
 	errors.HandleError("Can't launch Chromium", &err)
-	fmt.Println(env["BANK_LOGIN"], env["BANK_PASSWORD"])
 	page := browser.GetBrowserPage(driver)
 
-	browser.LoginToAccount(page, env["BANK_LOGIN"], env["BANK_PASSWORD"])
+	browser.LoginToAccount(page, c.LkLogin, c.LkPassword)
 
 	timeout := 10000.0
 	browser.GetTransferPage(page, &timeout)
 
-	headers := browser.SendFirstPhoneRequest(page)
+	headers, account := browser.SendFirstPhoneRequest(page)
 
 	quit := make(chan bool, 1)
+	tgBot := bot.GetBot(c.BotToken)
 	go func() {
 		for range quit {
 			browser.KeepSession(page)
 		}
 	}()
-
-	respChan := make(chan Number, 50000)
-	tasksChan := make(chan Number, 50000)
+	go tgBot.Start()
+	respChan := make(chan Number, 500000)
+	tasksChan := make(chan Number, 500000)
 	var wg sync.WaitGroup
-	for i := 0; i < c.NumWorkers; i++ {
-		transfer := new(Transfer)
+	//transfer := new(Transfer)
+	fmt.Println(c.NumWorkers)
+	var i int64
+	var m sync.Mutex
+	for i = 0; i <= c.NumWorkers; i++ {
 		wg.Add(1)
-		go askForPhone(&requestUrl, &headers, client, tasksChan, respChan, &wg, i, transfer)
-		errors.HandleError("error while reading POST response: ", &err)
+		go askForPhone(&requestUrl, &headers, account, client, tasksChan, respChan, &wg, i, tgBot, c.TgUserID, &m)
 	}
 
 	c.GetNumbers(tasksChan)
@@ -203,8 +227,9 @@ func (c Checker) Run() {
 	quit <- true
 	close(quit)
 	fmt.Println("Quit channel closed")
-	c.SaveRelevantNumbers(respChan)
+	c.SaveRelevantNumbers(respChan, tgBot, c.TgUserID)
 	c.DeleteInputFiles()
+	tgBot.Stop()
 	fmt.Println("[checker] Checker.Run() stopped")
 
 	if err = driver.Close(); err != nil {

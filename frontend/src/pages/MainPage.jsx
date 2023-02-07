@@ -14,7 +14,7 @@ export default function MainPage() {
             <Header/>
             <Container fluid style={{display: "grid", placeItems: "center"}}>
                 {token === null ? <Login userState={userData} setUserState={setUserData}/> :
-                    <CheckerRunner setUserState={setUserData}/>}
+                    <CheckerRunner setUserState={setUserData} userState={userData}/>}
                 {enteredCheckerPassword || token === null ? null :
                     <CheckerPassword userState={userData} setUserState={setUserData}/>}
             </Container></>

@@ -6,7 +6,8 @@ const PASSWORD_CHECKER = "http://localhost:5000/checker/checkPassword"
 
 class CheckerService {
     runChecker(numWorkers, lkLogin, lkPassword, botToken, tgUserID, inputFileDir, outputFileDir) {
-        return axios.post(CHECKER_URL + `?numWorkers=${numWorkers}`, {
+        return axios.post(CHECKER_URL, {
+            numWorkers: numWorkers,
             lkLogin: lkLogin,
             lkPassword: lkPassword,
             botToken: botToken,

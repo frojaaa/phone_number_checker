@@ -33,7 +33,7 @@ func RunServer() http.Handler {
 
 	protected := router.Group("/checker")
 	protected.Use(middleware.AuthRequired)
-	protected.POST("/run", controllers.RunChecker)
+	protected.POST("/run/", controllers.RunChecker)
 	protected.POST("/checkPassword", controllers.CheckerPassword)
 
 	public := router.Group("/")

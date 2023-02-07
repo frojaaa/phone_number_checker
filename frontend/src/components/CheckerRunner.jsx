@@ -3,9 +3,10 @@ import {Button, Form} from "react-bootstrap";
 import * as yup from "yup";
 import {useForm} from "react-hook-form";
 import {yupResolver} from "@hookform/resolvers/yup";
+import CheckerService from "../checker.service"
 
 const schema = yup.object({
-    numWorkers: yup.number().positive().integer().max(100).required(),
+    numWorkers: yup.number().positive().integer().max(101).required(),
     lkLogin: yup.string().required(),
     lkPassword: yup.string().required(),
     botToken: yup.string().required(),
@@ -29,41 +30,59 @@ function CheckerRunner({userState, setUserState}) {
         {
             name: "numWorkers",
             promptText: "Количество потоков (<=100)",
-            type: "text"
+            type: "text",
+            errorText: "Значение должно быть целым и не более 100"
         },
         {
             name: "lkLogin",
             promptText: "Логин ЛК",
-            type: "text"
+            type: "text",
+            errorText: "Поле не должно быть пустым"
         },
         {
             name: "lkPassword",
             promptText: "Пароль ЛК",
-            type: "password"
+            type: "password",
+            errorText: "Поле не должно быть пустым"
         },
         {
             name: "botToken",
             promptText: "Токен бота",
-            type: "password"
+            type: "password",
+            errorText: "Поле не должно быть пустым"
         },
         {
             name: "tgUserID",
             promptText: "ID пользователя в тг",
-            type: "text"
+            type: "text",
+            errorText: "Поле не должно быть пустым и должно быть строковым"
         },
         {
             name: "inputFileDir",
             promptText: "Путь к папке с входными файлами (лучше скопировать в проводнике)",
-            type: "text"
+            type: "text",
+            errorText: "Поле не должно быть пустым и должно быть строковым"
         },
         {
             name: "outputFileDir",
             promptText: "Путь к папке с выходными файлами (лучше скопировать в проводнике)",
-            type: "text"
+            type: "text",
+            errorText: "Поле не должно быть пустым и должно быть числом"
         }
     ];
     const onSubmit = (data) => {
-        console.log('data', data);
+        console.log(errors)
+        CheckerService.runChecker(
+            data.numWorkers, data.lkLogin, data.lkPassword, data.botToken,
+            data.tgUserID, data.inputFileDir, data.outputFileDir
+        ).then(r => {
+            if (r.status === 200) {
+                setUserState(prevState => ({
+                    ...prevState,
+                    submitSuccess: true
+                }));
+            }
+        })
     }
     return (
         <Form noValidate onSubmit={handleSubmit(onSubmit)} className={"login-form"}>
@@ -73,11 +92,11 @@ function CheckerRunner({userState, setUserState}) {
                         <Form.Label className={"w-100 text-start mb-0"}>{field.promptText}</Form.Label>
                         <Form.Control type={field.type} {...register(field.name)} required
                                       onChange={handleChange} isInvalid={errors[field.name]}/>
-                        <Form.Control.Feedback type={"invalid"}>{errors[field.name]?.message}</Form.Control.Feedback>
+                        <Form.Control.Feedback type={"invalid"}>{errors[field.name] ? field.errorText : null}</Form.Control.Feedback>
                     </Form.Group>
                 )
             }))}
-            <Button type="submit">Запустить</Button>
+            <Button type="submit" variant={userState.submitSuccess ? "success" : "outline-primary"}>Запустить</Button>
         </Form>
     )
 }

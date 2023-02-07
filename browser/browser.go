@@ -5,6 +5,7 @@ import (
 	"github.com/playwright-community/playwright-go"
 	"log"
 	"phone_numbers_checker/errors"
+	"strings"
 )
 
 type loginFields struct {
@@ -16,6 +17,10 @@ type transferFields struct {
 	phone       playwright.ElementHandle
 	transferSum playwright.ElementHandle
 	destination playwright.ElementHandle
+}
+
+type requestData struct {
+	PayerAccount string `json:"payerAccount"`
 }
 
 func GetBrowserPage(browser playwright.Browser) playwright.Page {
@@ -126,7 +131,7 @@ func GetTransferPage(page playwright.Page, timeout *float64) {
 	errors.HandleError("Can't click phone button", &err)
 }
 
-func SendFirstPhoneRequest(page playwright.Page) map[string]string {
+func SendFirstPhoneRequest(page playwright.Page) (map[string]string, string) {
 	fields := findTransferFields(page)
 	fillTransferFields(page, fields)
 
@@ -138,8 +143,11 @@ func SendFirstPhoneRequest(page playwright.Page) map[string]string {
 
 	response := page.WaitForResponse("https://ib.rencredit.ru/rencredit.server.portal.app/rest/private/transfers/internal/register")
 	headers, err := response.Request().AllHeaders()
+	reqData, err := response.Request().PostData()
+	errors.HandleError("error getting request data: ", &err)
+	account := strings.Split(strings.Split(reqData, "&")[0], "=")[1]
 	errors.HandleError("Error while getting headers", &err)
-	return headers
+	return headers, account
 }
 
 func KeepSession(page playwright.Page) {
